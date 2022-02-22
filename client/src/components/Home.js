@@ -109,7 +109,7 @@ const Home = ({ user, logout }) => {
       let updatedConversations = conversations.slice();
       updatedConversations.forEach((convo) => {
         if (convo.id === message.conversationId) {
-          convo.messages.push(message);
+          convo.messages.unshift(message);
           convo.latestMessageText = message.text;
         }
       });
