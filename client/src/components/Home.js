@@ -194,19 +194,25 @@ const Home = ({ user, logout }) => {
 
   useEffect(() => {
     const reverseMessages = (data) => { // reverses messages array order
-      let newData = data.map((conversation) => {
+      const dataCopy = data.map(conversation => (
+        { ...conversation, 
+          messages: conversation.messages.map(message => ({...message})),
+          otherUser: {...conversation.otherUser}
+        }
+      ))
+
+      return dataCopy.map((conversation) => {
         let newConversationObj = conversation;
         newConversationObj.messages = conversation.messages.slice(0).reverse();
         return newConversationObj;
-      })
-      return newData;
+      });
     }
 
     const fetchConversations = async () => {
       try {
         const { data } = await axios.get('/api/conversations');
-        reverseMessages(data);
-        setConversations(data);
+        const newData = reverseMessages(data);
+        setConversations(newData);
       } catch (error) {
         console.error(error);
       }
