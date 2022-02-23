@@ -110,7 +110,7 @@ const Home = ({ user, logout }) => {
       let updatedConversations = conversations.slice();
       updatedConversations.forEach((convo) => {
         if (convo.id === message.conversationId) {
-          convo.messages.unshift(message);
+          convo.messages.push(message);
           convo.latestMessageText = message.text;
         }
       });
@@ -182,9 +182,19 @@ const Home = ({ user, logout }) => {
   }, [user, history, isLoggedIn]);
 
   useEffect(() => {
+    const reverseMessages = (data) => { // reverses messages array order
+      let newData = data.map((conversation) => {
+        let newConversationObj = conversation;
+        newConversationObj.messages = conversation.messages.slice(0).reverse();
+        return newConversationObj;
+      })
+      return newData;
+    }
+
     const fetchConversations = async () => {
       try {
         const { data } = await axios.get('/api/conversations');
+        reverseMessages(data);
         setConversations(data);
       } catch (error) {
         console.error(error);
