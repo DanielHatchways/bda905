@@ -62,9 +62,9 @@ const Home = ({ user, logout }) => {
     });
   };
 
-  const postMessage = (body) => {
+  const postMessage = async (body) => {
     try {
-      const data = saveMessage(body);
+      const data = await saveMessage(body);
 
       if (!body.conversationId) {
         addNewConvo(body.recipientId, data.message);
@@ -80,14 +80,21 @@ const Home = ({ user, logout }) => {
 
   const addNewConvo = useCallback(
     (recipientId, message) => {
-      conversations.forEach((convo) => {
+
+      let convoCopy = conversations.map(conversation => (
+        { ...conversation, 
+          messages: conversation.messages.map(message => ({...message}))
+        }
+      ));
+
+      convoCopy.forEach((convo) => {
         if (convo.otherUser.id === recipientId) {
           convo.messages.push(message);
           convo.latestMessageText = message.text;
           convo.id = message.conversationId;
         }
       });
-      setConversations(conversations);
+      setConversations(convoCopy);
     },
     [setConversations, conversations]
   );
@@ -106,13 +113,19 @@ const Home = ({ user, logout }) => {
         setConversations((prev) => [newConvo, ...prev]);
       }
 
-      conversations.forEach((convo) => {
+      let convoCopy = conversations.map(conversation => (
+        { ...conversation, 
+          messages: conversation.messages.map(message => ({...message}))
+        }
+      ));
+
+      convoCopy.forEach((convo) => {
         if (convo.id === message.conversationId) {
           convo.messages.push(message);
           convo.latestMessageText = message.text;
         }
       });
-      setConversations(conversations);
+      setConversations(convoCopy);
     },
     [setConversations, conversations]
   );
@@ -180,10 +193,26 @@ const Home = ({ user, logout }) => {
   }, [user, history, isLoggedIn]);
 
   useEffect(() => {
+    const reverseMessages = (data) => { // reverses messages array order
+      const dataCopy = data.map(conversation => (
+        { ...conversation, 
+          messages: conversation.messages.map(message => ({...message})),
+          otherUser: {...conversation.otherUser}
+        }
+      ))
+
+      return dataCopy.map((conversation) => {
+        let newConversationObj = conversation;
+        newConversationObj.messages = conversation.messages.slice(0).reverse();
+        return newConversationObj;
+      });
+    }
+
     const fetchConversations = async () => {
       try {
         const { data } = await axios.get('/api/conversations');
-        setConversations(data);
+        const newData = reverseMessages(data);
+        setConversations(newData);
       } catch (error) {
         console.error(error);
       }
