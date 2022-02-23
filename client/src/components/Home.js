@@ -83,8 +83,7 @@ const Home = ({ user, logout }) => {
 
       let convoCopy = conversations.map(conversation => (
         { ...conversation, 
-          messages: conversation.messages.map(message => ({...message})), 
-          otherUser: {...conversation.otherUser}
+          messages: conversation.messages.map(message => ({...message}))
         }
       ));
 
@@ -116,8 +115,7 @@ const Home = ({ user, logout }) => {
 
       let convoCopy = conversations.map(conversation => (
         { ...conversation, 
-          messages: conversation.messages.map(message => ({...message})), 
-          otherUser: {...conversation.otherUser}
+          messages: conversation.messages.map(message => ({...message}))
         }
       ));
 
