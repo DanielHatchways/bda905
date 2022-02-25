@@ -98,6 +98,33 @@ const Home = ({ user, logout }) => {
     },
     [setConversations, conversations]
   );
+  
+  //calculates number of unread messages from other user
+  const calculateUnreadMessages = useCallback(() => {
+    
+    const countUnread = (messages, lastReadIndex, userId) => {
+      let count = 0
+      for (let i = lastReadIndex + 1; i < messages.length; i++) {
+        if (messages[i].senderId === userId) count ++
+      }
+      return count;
+    }
+
+    setConversations((prev) =>
+      prev.map((convo) => {
+        if (convo.readmessages[0]) {
+          const lastReadIndex = convo.readmessages[0].lastReadIndex;
+          if (convo.messages[lastReadIndex].senderId !== user.id) {
+            const convoCopy = { ...convo };
+            convoCopy.unread = countUnread(convo.messages, lastReadIndex, user.id);
+            return convoCopy;
+          }
+        } else {
+          return convo;
+        }
+      })
+    );    
+  }, [user.id])
 
   const addMessageToConversation = useCallback(
     (data) => {
@@ -111,6 +138,7 @@ const Home = ({ user, logout }) => {
         };
         newConvo.latestMessageText = message.text;
         setConversations((prev) => [newConvo, ...prev]);
+        calculateUnreadMessages();
       }
 
       let convoCopy = conversations.map(conversation => (
@@ -126,6 +154,7 @@ const Home = ({ user, logout }) => {
         }
       });
       setConversations(convoCopy);
+      calculateUnreadMessages();
     },
     [setConversations, conversations]
   );
@@ -161,33 +190,6 @@ const Home = ({ user, logout }) => {
       })
     );
   }, []);
-
-  //calculates number of unread messages from other user
-  const calculateUnreadMessages = useCallback(() => {
-    
-    const countUnread = (messages, lastReadIndex, userId) => {
-      let count = 0
-      for (let i = lastReadIndex + 1; i < messages.length; i++) {
-        if (messages[i].senderId === userId) count ++
-      }
-      return count;
-    }
-
-    setConversations((prev) =>
-      prev.map((convo) => {
-        if (convo.readmessages[0]) {
-          const lastReadIndex = convo.readmessages[0].lastReadIndex;
-          if (convo.messages[lastReadIndex].senderId !== user.id) {
-            const convoCopy = { ...convo };
-            convoCopy.unread = countUnread(convo.messages, lastReadIndex, user.id);
-            return convoCopy;
-          }
-        } else {
-          return convo;
-        }
-      })
-    );    
-  }, [user.id])
 
   // Lifecycle
 
