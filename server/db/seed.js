@@ -2,6 +2,7 @@ const db = require("./db");
 const { User } = require("./models");
 const Conversation = require("./models/conversation");
 const Message = require("./models/message");
+const ReadMessages = require("./models/readmessages");
 
 async function seed() {
   await db.sync({ force: true });
@@ -42,6 +43,11 @@ async function seed() {
     conversationId: santaigoConvo.id,
     senderId: santiago.id,
     text: "Share photo of your city, please",
+  });
+
+  await ReadMessages.create({
+    conversationId: santaigoConvo.id,
+    lastReadIndex: 0,
   });
 
   const chiumbo = await User.create({
