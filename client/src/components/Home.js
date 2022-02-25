@@ -162,6 +162,33 @@ const Home = ({ user, logout }) => {
     );
   }, []);
 
+  //calculates number of unread messages from other user
+  const calculateUnreadMessages = useCallback(() => {
+    
+    const countUnread = (messages, lastReadIndex, userId) => {
+      let count = 0
+      for (let i = lastReadIndex + 1; i < messages.length; i++) {
+        if (messages[i].senderId === userId) count ++
+      }
+      return count;
+    }
+
+    setConversations((prev) =>
+      prev.map((convo) => {
+        if (convo.readmessages[0]) {
+          const lastReadIndex = convo.readmessages[0].lastReadIndex;
+          if (convo.messages[lastReadIndex].senderId !== user.id) {
+            const convoCopy = { ...convo };
+            convoCopy.unread = countUnread(convo.messages, lastReadIndex, user.id);
+            return convoCopy;
+          }
+        } else {
+          return convo;
+        }
+      })
+    );    
+  }, [user.id])
+
   // Lifecycle
 
   useEffect(() => {
@@ -213,6 +240,7 @@ const Home = ({ user, logout }) => {
         const { data } = await axios.get('/api/conversations');
         const newData = reverseMessages(data);
         setConversations(newData);
+        calculateUnreadMessages();
       } catch (error) {
         console.error(error);
       }
@@ -220,7 +248,7 @@ const Home = ({ user, logout }) => {
     if (!user.isFetching) {
       fetchConversations();
     }
-  }, [user]);
+  }, [calculateUnreadMessages, user]);
 
   const handleLogout = async () => {
     if (user && user.id) {
