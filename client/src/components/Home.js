@@ -156,6 +156,22 @@ const Home = ({ user, logout }) => {
       } 
     }, [calculateUnreadMessages]);
 
+  const findActiveConversation = useCallback((conversations, activeConversation) => {
+    return conversations
+      ? conversations.find(
+          (conversation) => conversation.otherUser.username === activeConversation
+        )
+      : {};    
+  }, [])
+
+  const handleUnread = useCallback((conversations) => {
+    calculateUnreadMessages();
+    if(activeConversation) {
+      const conversation = findActiveConversation(conversations, activeConversation);
+      markRead(conversation);
+    };
+  }, [calculateUnreadMessages, markRead, findActiveConversation, activeConversation])
+
   const addMessageToConversation = useCallback(
     (data) => {
       // if sender isn't null, that means the message needs to be put in a brand new convo
@@ -168,7 +184,6 @@ const Home = ({ user, logout }) => {
         };
         newConvo.latestMessageText = message.text;
         setConversations((prev) => [newConvo, ...prev]);
-        calculateUnreadMessages();
       }
 
       let convoCopy = conversations.map(conversation => (
@@ -184,9 +199,9 @@ const Home = ({ user, logout }) => {
         }
       });
       setConversations(convoCopy);
-      calculateUnreadMessages();
+      handleUnread(convoCopy);
     },
-    [setConversations, calculateUnreadMessages, conversations]
+    [setConversations, handleUnread, conversations]
   );
 
   const setActiveChat = (conversation) => {
@@ -335,6 +350,7 @@ const Home = ({ user, logout }) => {
           conversations={conversations}
           user={user}
           postMessage={postMessage}
+          findActiveConversation={findActiveConversation}
         />
       </Grid>
     </>

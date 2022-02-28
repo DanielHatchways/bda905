@@ -21,17 +21,14 @@ const useStyles = makeStyles(() => ({
 
 const ActiveChat = ({
   user,
+  findActiveConversation,
   conversations,
   activeConversation,
   postMessage,
 }) => {
   const classes = useStyles();
 
-  const conversation = conversations
-    ? conversations.find(
-        (conversation) => conversation.otherUser.username === activeConversation
-      )
-    : {};
+  const conversation = findActiveConversation(conversations, activeConversation);
 
   const isConversation = (obj) => {
     return obj !== {} && obj !== undefined;
