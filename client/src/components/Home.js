@@ -128,20 +128,31 @@ const Home = ({ user, logout }) => {
     );    
   }, [user.id])
   
-  const markRead = useCallback((conversation) => {
+  const saveReadStatus = async (lastReadIndex, conversationId) => {
+    const body = {
+      lastReadIndex,
+      conversationId
+    }
+    const { data } = await axios.post('/api/readMessages', body);
+    return data.data[0];
+  };
+
+  const markRead = useCallback(async (conversation) => {
       const messages = conversation.messages
       const lastMessageIndex = messages.length - 1;
       const lastMessageSender = messages[lastMessageIndex].senderId;
       const otherUser = conversation.otherUser.id;
 
-      //there will only ne unread messages to mark as read if last message was from other user
+      //there will only be unread messages to mark as read if last message was from other user
       if (lastMessageSender === otherUser) {
         const convoId = conversation.id;
+        const lastIndex = await saveReadStatus(lastMessageIndex, convoId);
+
         setConversations((prev) =>
           prev.map((convo) => {
-            if (convo.id === convoId && convo.readmessages !== [{lastMessageIndex}]) {
+            if (convo.id === convoId && convo.readmessages !== [{lastIndex}]) {
               const convoCopy = { ...convo, readmessages: {...convo.readmessages[0]}};
-                convoCopy.readmessages = [{lastReadIndex: lastMessageIndex}];
+                convoCopy.readmessages = [{lastReadIndex: lastIndex}];
                 return convoCopy;
             } else {
               return convo;
