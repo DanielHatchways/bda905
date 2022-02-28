@@ -45,7 +45,9 @@ router.get("/", async (req, res, next) => {
           attributes: ["id", "username", "photoUrl"],
           required: false,
         },
-        { model: ReadMessages, attributes: ["lastReadIndex"] },
+        { model: ReadMessages,
+          attributes: ["messageSentFrom", "lastReadIndex"]
+        },
       ],
     });
 

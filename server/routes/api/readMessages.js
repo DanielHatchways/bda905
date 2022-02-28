@@ -1,26 +1,32 @@
 const router = require("express").Router();
 const ReadMessages = require("../../db/models/readmessages");
 
-
-// expects {recipientId, text, conversationId } in body (conversationId will be null if no conversation exists yet)
 router.post("/", async (req, res, next) => {
   try {
     if (!req.user) {
       return res.sendStatus(401);
     }
-    const { lastReadIndex, conversationId } = req.body;
+    const { lastReadIndex, conversationId, otherUser } = req.body;
     
-
-    // if we already know conversation id, we can save time and just add it to message and return
     if (conversationId) {
-      const data = await ReadMessages.update({
+      await ReadMessages.update({
+        messageSentFrom: otherUser,
         lastReadIndex
       }, {
         where: {
-          conversationId
+          conversationId,
+          messageSentFrom: otherUser
         }
       });
-      return res.json({ data });
+      const data = await ReadMessages.findAll({
+        where: {
+          conversationId,
+          messageSentFrom: otherUser
+        }, 
+        attributes: ["lastReadIndex"],
+      });
+
+      return res.json({data});
     }
   } catch (error) {
     next(error);

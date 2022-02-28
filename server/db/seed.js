@@ -47,6 +47,13 @@ async function seed() {
 
   await ReadMessages.create({
     conversationId: santaigoConvo.id,
+    messageSentFrom: 1,
+    lastReadIndex: 1,
+  });
+
+  await ReadMessages.create({
+    conversationId: santaigoConvo.id,
+    messageSentFrom: 2,
     lastReadIndex: 0,
   });
 
@@ -67,6 +74,17 @@ async function seed() {
     text: "Sure! What time?",
   });
 
+  await ReadMessages.create({
+    conversationId: chiumboConvo.id,
+    messageSentFrom: 3,
+    lastReadIndex: -1,
+  });
+
+  await ReadMessages.create({
+    conversationId: chiumboConvo.id,
+    messageSentFrom: 1,
+    lastReadIndex: -1,
+  });
   const hualing = await User.create({
     username: "hualing",
     email: "hualing@email.com",
@@ -93,6 +111,18 @@ async function seed() {
     text: "😂 😂 😂",
   });
 
+  await ReadMessages.create({
+    conversationId: hualingConvo.id,
+    messageSentFrom: 4,
+    lastReadIndex: -1,
+  });
+
+  await ReadMessages.create({
+    conversationId: hualingConvo.id,
+    messageSentFrom: 1,
+    lastReadIndex: -1,
+  });
+  
   const otherUsers = await Promise.all([
     ,
     User.create({
