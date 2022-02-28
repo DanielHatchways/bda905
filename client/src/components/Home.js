@@ -105,7 +105,7 @@ const Home = ({ user, logout }) => {
     const countUnread = (messages, lastReadIndex, userId) => {
       let count = 0
       for (let i = lastReadIndex + 1; i < messages.length; i++) {
-        if (messages[i].senderId === userId) count ++
+        if (messages[i].senderId !== userId) count++;
       }
       return count;
     }
@@ -118,6 +118,8 @@ const Home = ({ user, logout }) => {
             const convoCopy = { ...convo };
             convoCopy.unread = countUnread(convo.messages, lastReadIndex, user.id);
             return convoCopy;
+          } else {
+            return convo;
           }
         } else {
           return convo;
@@ -125,6 +127,30 @@ const Home = ({ user, logout }) => {
       })
     );    
   }, [user.id])
+  
+  const markRead = useCallback((conversation) => {
+      const messages = conversation.messages
+      const lastMessageIndex = messages.length - 1;
+      const lastMessageSender = messages[lastMessageIndex].senderId;
+      const otherUser = conversation.otherUser.id;
+
+      //there will only ne unread messages to mark as read if last message was from other user
+      if (lastMessageSender === otherUser) {
+        const convoId = conversation.id;
+        setConversations((prev) =>
+          prev.map((convo) => {
+            if (convo.id === convoId && convo.readmessages !== [{lastMessageIndex}]) {
+              const convoCopy = { ...convo, readmessages: {...convo.readmessages[0]}};
+                convoCopy.readmessages = [{lastReadIndex: lastMessageIndex}];
+                return convoCopy;
+            } else {
+              return convo;
+            }
+          })
+        );
+        calculateUnreadMessages(); 
+      } 
+    }, [calculateUnreadMessages]);
 
   const addMessageToConversation = useCallback(
     (data) => {
@@ -156,11 +182,12 @@ const Home = ({ user, logout }) => {
       setConversations(convoCopy);
       calculateUnreadMessages();
     },
-    [setConversations, conversations]
+    [setConversations, calculateUnreadMessages, conversations]
   );
 
-  const setActiveChat = (username) => {
-    setActiveConversation(username);
+  const setActiveChat = (conversation) => {
+    setActiveConversation(conversation.otherUser.username);
+    markRead(conversation);
   };
 
   const addOnlineUser = useCallback((id) => {
