@@ -120,6 +120,7 @@ const Home = ({ user, logout }) => {
     );    
   }, [user.id])
   
+  //api call to save read message info to database 
   const saveReadStatus = async (lastReadIndex, conversationId, otherUser) => {
     const body = {
       lastReadIndex,
@@ -130,6 +131,7 @@ const Home = ({ user, logout }) => {
     return data.data[0].lastReadIndex;
   };
 
+  //emits read message info to socket
   const sendReadMessage = useCallback((lastReadIndex, otherUser, conversationId) => {
     socket.emit('read-message', {
       lastReadIndex,
@@ -138,7 +140,8 @@ const Home = ({ user, logout }) => {
     });
   }, [socket]);
 
-  const updateReadMessage = useCallback((lastIndex, otherUser, conversationId) => { //saves read messages info to state
+  //saves read messages info to state
+  const updateReadMessage = useCallback((lastIndex, otherUser, conversationId) => {
     setConversations((prev) =>
       prev.map((convo) => {
         if (convo.id === conversationId && convo.readmessages[otherUser] !== lastIndex) {
@@ -152,7 +155,8 @@ const Home = ({ user, logout }) => {
     );
   }, [])
 
-  const markRead = useCallback(async (conversation) => { //marks conversations and messages read and updates state and database
+  //marks conversations and messages read and updates state and database
+  const markRead = useCallback(async (conversation) => { 
       if (conversation.messages.length === 0) return;
       const messages = conversation.messages
       const lastMessageIndex = messages.length - 1;
@@ -171,7 +175,8 @@ const Home = ({ user, logout }) => {
       } 
     }, [calculateUnreadMessages, sendReadMessage, updateReadMessage]);
 
-  const findActiveConversation = useCallback((conversations, activeConversation) => {
+  //select conversation obj using username from activeConversation state
+    const findActiveConversation = useCallback((conversations, activeConversation) => {
     return conversations
       ? conversations.find(
           (conversation) => conversation.otherUser.username === activeConversation
@@ -179,6 +184,7 @@ const Home = ({ user, logout }) => {
       : {};    
   }, [])
 
+  //handles state of unread message tracking for rendering of components
   const handleUnread = useCallback((conversations) => {
     calculateUnreadMessages();
     if(activeConversation) {
@@ -253,7 +259,8 @@ const Home = ({ user, logout }) => {
     );
   }, []);
 
-  const readMessageHandler = useCallback((data) => { //handles incoming socket data destructuring
+  //handles incoming socket data destructuring
+  const readMessageHandler = useCallback((data) => {
     const { lastReadIndex, otherUser, conversationId } = data;
 
     updateReadMessage(lastReadIndex, otherUser, conversationId);
@@ -292,7 +299,8 @@ const Home = ({ user, logout }) => {
   }, [user, history, isLoggedIn]);
 
   useEffect(() => {
-    const reverseMessages = (data) => { // reverses messages array order
+    // reverses messages array order
+    const reverseMessages = (data) => { 
       const dataCopy = data.map(conversation => (
         { ...conversation, 
           messages: conversation.messages.map(message => ({...message})),
@@ -307,7 +315,8 @@ const Home = ({ user, logout }) => {
       });
     }
 
-    const formatReadMessages = (data) => { // changes data structure for easier access
+    // changes data structure for easier access
+    const formatReadMessages = (data) => {
       const dataCopy = data.map(conversation => (
         { ...conversation, 
           readmessages: conversation.readmessages.map(readmessage => ({...readmessage})),
