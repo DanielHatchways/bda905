@@ -130,7 +130,29 @@ const Home = ({ user, logout }) => {
     return data.data[0].lastReadIndex;
   };
 
-  const markRead = useCallback(async (conversation) => {
+  const sendReadMessage = useCallback((lastReadIndex, otherUser, conversationId) => {
+    socket.emit('read-message', {
+      lastReadIndex,
+      otherUser,
+      conversationId
+    });
+  }, [socket]);
+
+  const updateReadMessage = useCallback((lastIndex, otherUser, conversationId) => { //saves read messages info to state
+    setConversations((prev) =>
+      prev.map((convo) => {
+        if (convo.id === conversationId && convo.readmessages[otherUser] !== lastIndex) {
+          const convoCopy = { ...convo, readmessages: {...convo.readmessages}};
+            convoCopy.readmessages[otherUser].lastReadIndex = lastIndex;
+            return convoCopy;
+        } else {
+          return convo;
+        }
+      })
+    );
+  }, [])
+
+  const markRead = useCallback(async (conversation) => { //marks conversations and messages read and updates state and database
       const messages = conversation.messages
       const lastMessageIndex = messages.length - 1;
       const lastMessageSender = messages[lastMessageIndex].senderId;
@@ -140,21 +162,13 @@ const Home = ({ user, logout }) => {
       if (lastMessageSender === otherUser) {
         const convoId = conversation.id;
         const lastIndex = await saveReadStatus(lastMessageIndex, convoId, otherUser);
+        sendReadMessage(lastIndex, otherUser, conversation.id);
 
-        setConversations((prev) =>
-          prev.map((convo) => {
-            if (convo.id === convoId && convo.readmessages[otherUser.id] !== lastIndex) {
-              const convoCopy = { ...convo, readmessages: {...convo.readmessages}};
-                convoCopy.readmessages[otherUser].lastReadIndex = lastIndex;
-                return convoCopy;
-            } else {
-              return convo;
-            }
-          })
-        );
+        updateReadMessage(lastIndex, otherUser, convoId);
+
         calculateUnreadMessages(); 
       } 
-    }, [calculateUnreadMessages]);
+    }, [calculateUnreadMessages, sendReadMessage, updateReadMessage]);
 
   const findActiveConversation = useCallback((conversations, activeConversation) => {
     return conversations
@@ -237,10 +251,17 @@ const Home = ({ user, logout }) => {
     );
   }, []);
 
+  const readMessageHandler = useCallback((data) => { //handles incoming socket data destructuring
+    const { lastReadIndex, otherUser, conversationId } = data;
+
+    updateReadMessage(lastReadIndex, otherUser, conversationId);
+  },[updateReadMessage])
+
   // Lifecycle
 
   useEffect(() => {
     // Socket init
+    socket.on('read-message', readMessageHandler);
     socket.on('add-online-user', addOnlineUser);
     socket.on('remove-offline-user', removeOfflineUser);
     socket.on('new-message', addMessageToConversation);
@@ -248,11 +269,12 @@ const Home = ({ user, logout }) => {
     return () => {
       // before the component is destroyed
       // unbind all event handlers used in this component
+      socket.off('read-message', readMessageHandler);
       socket.off('add-online-user', addOnlineUser);
       socket.off('remove-offline-user', removeOfflineUser);
       socket.off('new-message', addMessageToConversation);
     };
-  }, [addMessageToConversation, addOnlineUser, removeOfflineUser, socket]);
+  }, [addMessageToConversation, addOnlineUser, removeOfflineUser, readMessageHandler, socket]);
 
   useEffect(() => {
     // when fetching, prevent redirect
