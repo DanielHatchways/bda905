@@ -153,6 +153,7 @@ const Home = ({ user, logout }) => {
   }, [])
 
   const markRead = useCallback(async (conversation) => { //marks conversations and messages read and updates state and database
+      if (conversation.messages.length === 0) return;
       const messages = conversation.messages
       const lastMessageIndex = messages.length - 1;
       const lastMessageSender = messages[lastMessageIndex].senderId;
@@ -212,10 +213,11 @@ const Home = ({ user, logout }) => {
           convo.latestMessageText = message.text;
         }
       });
+
       setConversations(convoCopy);
-      handleUnread(convoCopy);
+      if(data.message.senderId !== user.id) handleUnread(convoCopy);
     },
-    [setConversations, handleUnread, conversations]
+    [setConversations, handleUnread, conversations, user]
   );
 
   const setActiveChat = (conversation) => {
