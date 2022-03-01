@@ -33,7 +33,10 @@ const Chat = ({ conversation, setActiveChat, unread }) => {
         online={otherUser.online}
         sidebar={true}
       />
-      <ChatContent conversation={conversation} />
+      <ChatContent 
+        conversation={conversation}
+        unread={unread} 
+      />
       {unread && <UnreadBubble text={unread}/>}
     </Box>
   );
