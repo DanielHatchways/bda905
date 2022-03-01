@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { Conversation, Message } = require("../../db/models");
+const { Conversation, Message, ReadMessages } = require("../../db/models");
 const onlineUsers = require("../../onlineUsers");
 
 // expects {recipientId, text, conversationId } in body (conversationId will be null if no conversation exists yet)
@@ -31,6 +31,19 @@ router.post("/", async (req, res, next) => {
       if (onlineUsers.includes(sender.id)) {
         sender.online = true;
       }
+
+      //create readMessage database entry for tracking of new conversation
+      await ReadMessages.create({
+        conversationId: conversation.id,
+        messageSentFrom: senderId,
+        lastReadIndex: -1,
+      });
+    
+      await ReadMessages.create({
+        conversationId: conversation.id,
+        messageSentFrom: recipientId,
+        lastReadIndex: -1,
+      });
     }
     const message = await Message.create({
       senderId,
