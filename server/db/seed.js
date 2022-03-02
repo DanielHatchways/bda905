@@ -2,7 +2,6 @@ const db = require("./db");
 const { User } = require("./models");
 const Conversation = require("./models/conversation");
 const Message = require("./models/message");
-const ReadMessages = require("./models/readmessages");
 
 async function seed() {
   await db.sync({ force: true });
@@ -33,28 +32,18 @@ async function seed() {
     conversationId: santaigoConvo.id,
     senderId: santiago.id,
     text: "Where are you from?",
+    read: true,
   });
   await Message.create({
     conversationId: santaigoConvo.id,
     senderId: thomas.id,
     text: "I'm from New York",
+    read: true,
   });
   await Message.create({
     conversationId: santaigoConvo.id,
     senderId: santiago.id,
     text: "Share photo of your city, please",
-  });
-
-  await ReadMessages.create({
-    conversationId: santaigoConvo.id,
-    messageSentFrom: 1,
-    lastReadIndex: 1,
-  });
-
-  await ReadMessages.create({
-    conversationId: santaigoConvo.id,
-    messageSentFrom: 2,
-    lastReadIndex: 0,
   });
 
   const chiumbo = await User.create({
@@ -74,17 +63,6 @@ async function seed() {
     text: "Sure! What time?",
   });
 
-  await ReadMessages.create({
-    conversationId: chiumboConvo.id,
-    messageSentFrom: 3,
-    lastReadIndex: -1,
-  });
-
-  await ReadMessages.create({
-    conversationId: chiumboConvo.id,
-    messageSentFrom: 1,
-    lastReadIndex: -1,
-  });
   const hualing = await User.create({
     username: "hualing",
     email: "hualing@email.com",
@@ -109,18 +87,6 @@ async function seed() {
     conversationId: hualingConvo.id,
     senderId: hualing.id,
     text: "😂 😂 😂",
-  });
-
-  await ReadMessages.create({
-    conversationId: hualingConvo.id,
-    messageSentFrom: 4,
-    lastReadIndex: -1,
-  });
-
-  await ReadMessages.create({
-    conversationId: hualingConvo.id,
-    messageSentFrom: 1,
-    lastReadIndex: -1,
   });
   
   const otherUsers = await Promise.all([

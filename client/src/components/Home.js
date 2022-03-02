@@ -98,62 +98,20 @@ const Home = ({ user, logout }) => {
     },
     [setConversations, conversations]
   );
-  
-  //calculates number of unread messages from other user
-  const calculateUnreadMessages = useCallback(() => {
-    
-    const countUnread = (messages, lastReadIndex, userId) => {
-      let count = 0
-      for (let i = lastReadIndex + 1; i < messages.length; i++) {
-        if (messages[i].senderId !== userId) count++;
-      }
-      return count;
-    }
-
-    setConversations((prev) =>
-      prev.map((convo) => {
-        const lastReadIndex = convo.readmessages[convo.otherUser.id].lastReadIndex;
-        const convoCopy = { ...convo };
-        convoCopy.unread = countUnread(convo.messages, lastReadIndex, user.id);
-        return convoCopy;
-      })
-    );    
-  }, [user.id])
-  
-  //api call to save read message info to database 
-  const saveReadStatus = async (lastReadIndex, conversationId, otherUser) => {
-    const body = {
-      lastReadIndex,
-      conversationId,
-      otherUser,
-    }
-    const { data } = await axios.post('/api/readMessages', body);
-    return data.data[0].lastReadIndex;
-  };
 
   //emits read message info to socket
-  const sendReadMessage = useCallback((lastReadIndex, otherUser, conversationId) => {
+  const sendReadMessage = useCallback((lastReadIndex, conversationId) => {
     socket.emit('read-message', {
       lastReadIndex,
-      otherUser,
-      conversationId
+      conversationId,
     });
   }, [socket]);
 
-  //saves read messages info to state
-  const updateReadMessage = useCallback((lastIndex, otherUser, conversationId) => {
-    setConversations((prev) =>
-      prev.map((convo) => {
-        if (convo.id === conversationId && convo.readmessages[otherUser] !== lastIndex) {
-          const convoCopy = { ...convo, readmessages: {...convo.readmessages}};
-            convoCopy.readmessages[otherUser].lastReadIndex = lastIndex;
-            return convoCopy;
-        } else {
-          return convo;
-        }
-      })
-    );
-  }, [])
+  //updates read status of messages in database
+  const saveReadMessages = async (body) => {
+    const { data } = await axios.put('/api/messages', body);
+    return data;
+  }
 
   //marks conversations and messages read and updates state and database
   const markRead = useCallback(async (conversation) => { 
@@ -166,14 +124,28 @@ const Home = ({ user, logout }) => {
       //there will only be unread messages to mark as read if last message was from other user
       if (lastMessageSender === otherUser) {
         const convoId = conversation.id;
-        const lastIndex = await saveReadStatus(lastMessageIndex, convoId, otherUser);
-        sendReadMessage(lastIndex, otherUser, conversation.id);
+        const readMessages = []
 
-        updateReadMessage(lastIndex, otherUser, convoId);
+        messages.forEach((message) => {
+          if (message.read === false && message.senderId !== user.id) readMessages.push(message.id);
+        })
 
-        calculateUnreadMessages(); 
+        saveReadMessages(readMessages);
+        sendReadMessage(lastMessageIndex, convoId);
+
+        setConversations((prev) =>
+          prev.map((convo) => {
+            if (convo.id === convoId) {
+              const convoCopy = { ...convo };
+              convoCopy.unread = 0;
+              return convoCopy;
+            } else {
+              return convo;
+            }
+          })
+        );
       } 
-    }, [calculateUnreadMessages, sendReadMessage, updateReadMessage]);
+    }, [sendReadMessage, user.id]);
 
   //select conversation obj using username from activeConversation state
     const findActiveConversation = useCallback((conversations, activeConversation) => {
@@ -184,14 +156,13 @@ const Home = ({ user, logout }) => {
       : {};    
   }, [])
 
-  //handles state of unread message tracking for rendering of components
-  const handleUnread = useCallback((conversations) => {
-    calculateUnreadMessages();
+  //handles state of unread messages in active conversations
+  const handleActiveConvoUnread = useCallback((conversations) => {
     if(activeConversation) {
       const conversation = findActiveConversation(conversations, activeConversation);
       markRead(conversation);
     };
-  }, [calculateUnreadMessages, markRead, findActiveConversation, activeConversation])
+  }, [markRead, findActiveConversation, activeConversation])
 
   const addMessageToConversation = useCallback(
     (data) => {
@@ -217,13 +188,14 @@ const Home = ({ user, logout }) => {
         if (convo.id === message.conversationId) {
           convo.messages.push(message);
           convo.latestMessageText = message.text;
+          if (message.senderId !== user.id) convo.unread++
         }
       });
 
       setConversations(convoCopy);
-      if(data.message.senderId !== user.id) handleUnread(convoCopy);
+      if(data.message.senderId !== user.id) handleActiveConvoUnread(convoCopy);
     },
-    [setConversations, handleUnread, conversations, user]
+    [setConversations, handleActiveConvoUnread, conversations, user]
   );
 
   const setActiveChat = (conversation) => {
@@ -261,10 +233,20 @@ const Home = ({ user, logout }) => {
 
   //handles incoming socket data destructuring
   const readMessageHandler = useCallback((data) => {
-    const { lastReadIndex, otherUser, conversationId } = data;
-
-    updateReadMessage(lastReadIndex, otherUser, conversationId);
-  },[updateReadMessage])
+    const { lastReadIndex, conversationId } = data;
+    
+    setConversations((prev) =>
+    prev.map((convo) => {
+      if (convo.id === conversationId) {
+        const convoCopy = { ...convo };
+        convoCopy.otherUserLastRead = lastReadIndex;
+        return convoCopy;
+      } else {
+        return convo;
+      }
+    })
+  );
+  },[])
 
   // Lifecycle
 
@@ -300,49 +282,50 @@ const Home = ({ user, logout }) => {
 
   useEffect(() => {
     // reverses messages array order
-    const reverseMessages = (data) => { 
-      const dataCopy = data.map(conversation => (
-        { ...conversation, 
-          messages: conversation.messages.map(message => ({...message})),
-          otherUser: {...conversation.otherUser}
-        }
-      ))
-
-      return dataCopy.map((conversation) => {
+    const reverseMessages = (conversations) => { 
+      return conversations.map((conversation) => {
         let newConversationObj = conversation;
         newConversationObj.messages = conversation.messages.slice(0).reverse();
         return newConversationObj;
       });
     }
 
-    // changes data structure for easier access
-    const formatReadMessages = (data) => {
-      const dataCopy = data.map(conversation => (
-        { ...conversation, 
-          readmessages: conversation.readmessages.map(readmessage => ({...readmessage})),
-        }
-      ))
-      
-      const createReadMessagesObj = (readMessages) => {
-        let readMessagesObj = {}
-        readMessages.forEach((readmessage) => {
-          readMessagesObj[readmessage.messageSentFrom] = readmessage;
+      //calculates number of unread messages from other user
+    const calculateUnreadMessages = (conversations) => {
+    
+      const countUnread = (messages, userId) => {
+        let count = 0
+        messages.forEach((message)=> {
+          if (message.senderId !== userId && message.read === false) count++;
         })
-        return readMessagesObj;
+        return count;
       }
 
-      return dataCopy.map((conversation) => {
-        let newConversationObj = conversation;
-        newConversationObj.readmessages = createReadMessagesObj(newConversationObj.readmessages);
-        return newConversationObj;
-      });
+      const otherUserLastRead = (messages, userId) => {
+        let index = -1;
+        messages.forEach((message, i)=> {
+          if (message.senderId === userId && message.read === true) index = i;
+        })
+        return index;
+      }
+
+      return conversations.map((convo) => {
+          convo.unread = countUnread(convo.messages, user.id);
+          convo.otherUserLastRead = otherUserLastRead(convo.messages, user.id);
+          return convo;
+        })    
     }
 
     const formatData = (data) => {
-      const formatedMessages = reverseMessages(data);
-      const formatedReadMessages = formatReadMessages(formatedMessages);
-
-      return formatedReadMessages;
+      const dataCopy = data.map(conversation => (
+        { ...conversation, 
+          messages: conversation.messages.map(message => ({...message})),
+          otherUser: {...conversation.otherUser}
+        }
+      ))
+      const formatedMessages = reverseMessages(dataCopy);
+      const countUnread = calculateUnreadMessages(formatedMessages)
+      return countUnread;
     }
 
     const fetchConversations = async () => {
@@ -350,7 +333,6 @@ const Home = ({ user, logout }) => {
         const { data } = await axios.get('/api/conversations');
         const newData = formatData(data);
         setConversations(newData);
-        calculateUnreadMessages();
       } catch (error) {
         console.error(error);
       }
@@ -358,7 +340,7 @@ const Home = ({ user, logout }) => {
     if (!user.isFetching) {
       fetchConversations();
     }
-  }, [calculateUnreadMessages, user]);
+  }, [user]);
 
   const handleLogout = async () => {
     if (user && user.id) {
