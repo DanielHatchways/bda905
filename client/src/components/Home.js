@@ -81,22 +81,21 @@ const Home = ({ user, logout }) => {
   const addNewConvo = useCallback(
     (recipientId, message) => {
 
-      let convoCopy = conversations.map(conversation => (
-        { ...conversation, 
-          messages: conversation.messages.map(message => ({...message}))
-        }
-      ));
-
-      convoCopy.forEach((convo) => {
+      setConversations((prev) =>
+      prev.map((convo) => {
         if (convo.otherUser.id === recipientId) {
-          convo.messages.push(message);
-          convo.latestMessageText = message.text;
-          convo.id = message.conversationId;
+          let convoCopy = {...convo, messages: convo.messages.map(message => ({...message}))}
+          convoCopy.messages.push(message);
+          convoCopy.latestMessageText = message.text;
+          convoCopy.id = message.conversationId;
+          return convoCopy
+        } else {
+          return convo;
         }
-      });
-      setConversations(convoCopy);
+      })
+      );
     },
-    [setConversations, conversations]
+    [setConversations]
   );
 
   //emits read message info to socket
@@ -178,17 +177,15 @@ const Home = ({ user, logout }) => {
         setConversations((prev) => [newConvo, ...prev]);
       }
 
-      let convoCopy = conversations.map(conversation => (
-        { ...conversation, 
-          messages: conversation.messages.map(message => ({...message}))
-        }
-      ));
-
-      convoCopy.forEach((convo) => {
+      const convoCopy = conversations.map((convo) => {
         if (convo.id === message.conversationId) {
-          convo.messages.push(message);
-          convo.latestMessageText = message.text;
-          if (message.senderId !== user.id) convo.unread++
+          let convoCopy = {...convo, messages: convo.messages.map(message => ({...message}))}
+          convoCopy.messages.push(message);
+          convoCopy.latestMessageText = message.text;
+          if (message.senderId !== user.id) convoCopy.unread++
+          return convoCopy;
+        } else {
+          return convo;
         }
       });
 
