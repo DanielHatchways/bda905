@@ -52,7 +52,7 @@ router.put("/", (req, res, next) => {
         { read: true },
         { where: { id: messageId } }
       );
-      res.json({ message });
+      res.json('success');
     } catch (error) {
       next(error);
     }

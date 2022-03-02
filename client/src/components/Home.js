@@ -130,8 +130,8 @@ const Home = ({ user, logout }) => {
           if (message.read === false && message.senderId !== user.id) readMessages.push(message.id);
         })
 
-        saveReadMessages(readMessages);
-        sendReadMessage(lastMessageIndex, convoId);
+        const saveReadStatus = await saveReadMessages(readMessages);
+        if (saveReadStatus === 'success') sendReadMessage(lastMessageIndex, convoId);
 
         setConversations((prev) =>
           prev.map((convo) => {
