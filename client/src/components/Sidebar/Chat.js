@@ -1,7 +1,7 @@
 import React from 'react';
-import { Box } from '@material-ui/core';
-import { BadgeAvatar, ChatContent, UnreadBubble } from '../Sidebar';
+import { Box, Badge } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
+import { BadgeAvatar, ChatContent } from '../Sidebar';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -15,6 +15,9 @@ const useStyles = makeStyles((theme) => ({
       cursor: 'grab',
     },
   },
+  bubble: {
+    margin: 20,
+  }
 }));
 
 const Chat = ({ conversation, setActiveChat, unread }) => {
@@ -37,7 +40,11 @@ const Chat = ({ conversation, setActiveChat, unread }) => {
         conversation={conversation}
         unread={unread} 
       />
-      {unread && <UnreadBubble text={unread}/>}
+      <Badge 
+        className={classes.bubble} 
+        badgeContent={unread} 
+        color="primary"
+      />
     </Box>
   );
 };
