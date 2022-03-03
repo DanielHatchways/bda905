@@ -107,13 +107,29 @@ const Home = ({ user, logout }) => {
   }, [socket]);
 
   //updates read status of messages in database
-  const saveReadMessages = async (body) => {
-    const { data } = await axios.put('/api/messages', body);
-    return data;
-  }
+  const saveReadMessages = useCallback((readMessages, convoId, lastMessageIndex) => {
+    const body = {readMessages, convoId}
+    axios.put('/api/messages', body)
+    .then((res) => {
+      if (res.status === 204) {
+        sendReadMessage(lastMessageIndex, convoId);
+        setConversations((prev) =>
+            prev.map((convo) => {
+              if (convo.id === convoId) {
+                const convoCopy = { ...convo };
+                convoCopy.unread = 0;
+                return convoCopy;
+              } else {
+                return convo;
+              }
+            })
+          )
+      }
+    })
+  }, [sendReadMessage])
 
   //marks conversations and messages read and updates state and database
-  const markRead = useCallback(async (conversation) => { 
+  const markRead = useCallback((conversation) => { 
       if (conversation.messages.length === 0) return;
       const messages = conversation.messages
       const lastMessageIndex = messages.length - 1;
@@ -129,22 +145,9 @@ const Home = ({ user, logout }) => {
           if (message.read === false && message.senderId !== user.id) readMessages.push(message.id);
         })
 
-        const saveReadStatus = await saveReadMessages(readMessages);
-        if (saveReadStatus === 'success') sendReadMessage(lastMessageIndex, convoId);
-
-        setConversations((prev) =>
-          prev.map((convo) => {
-            if (convo.id === convoId) {
-              const convoCopy = { ...convo };
-              convoCopy.unread = 0;
-              return convoCopy;
-            } else {
-              return convo;
-            }
-          })
-        );
+        saveReadMessages(readMessages, convoId, lastMessageIndex)
       } 
-    }, [sendReadMessage, user.id]);
+    }, [saveReadMessages, user.id]);
 
   //select conversation obj using username from activeConversation state
     const findActiveConversation = useCallback((conversations, activeConversation) => {
@@ -293,7 +296,7 @@ const Home = ({ user, logout }) => {
       const countUnread = (messages, userId) => {
         let count = 0
         messages.forEach((message)=> {
-          if (message.senderId !== userId && message.read === false) count++;
+          if (message.senderId !== userId && !message.read) count++;
         })
         return count;
       }
@@ -301,7 +304,7 @@ const Home = ({ user, logout }) => {
       const otherUserLastRead = (messages, userId) => {
         let index = -1;
         messages.forEach((message, i)=> {
-          if (message.senderId === userId && message.read === true) index = i;
+          if (message.senderId === userId && message.read) index = i;
         })
         return index;
       }
